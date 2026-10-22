@@ -15,18 +15,23 @@ sends.
 `01-access-dialog.mjs`, and stops the server. 31 checks; screenshots land in `shots/`
 (gitignored).
 
-Not wired into `tox -e pytest` on purpose: it needs a built web client, a running server, a
-droppable Mongo, and a Chrome.
+Not wired into `tox -e pytest`: it needs a built web client, a running server, a droppable
+Mongo, and a browser. CI runs it as its own job, **Browser end-to-end** in
+`.github/workflows/build-test.yaml`, and uploads `shots/` and `girder.log` as the
+`browser-verification` artifact whether it passes or not.
 
 ## Requirements
 
-- Chrome, `CHROME=/usr/bin/google-chrome` by default.
-- playwright, resolved from `$PLAYWRIGHT`, else `~/node_modules/playwright`, else the ambient
-  `node_modules`. It is **not** a dependency of this repo, and no `ms-playwright` browsers
-  are needed: `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm install playwright` anywhere, then point
-  `$PLAYWRIGHT` at it.
+- playwright: `npm ci` in this directory (pinned in `package.json` here, not in the
+  plugin's own packages). `$PLAYWRIGHT=/path/to/node_modules/playwright` overrides it.
+- A browser, chosen by `$CHROME`:
+  - unset: the system Chrome at `/usr/bin/google-chrome`, so nothing needs downloading
+    locally. Set it to another path to use a different Chrome.
+  - empty (`CHROME=`): playwright's own Chromium, from `npx playwright install chromium`.
+    This is what CI uses, with `--with-deps`.
 - MongoDB on `localhost:27017`.
 - A built web client (`cd ../../web_client && npm ci && npm run build`).
+- `girder` in the repo's `.venv` (`uv sync`), or pass another venv as `$1`.
 
 ## What `01-access-dialog.mjs` covers
 

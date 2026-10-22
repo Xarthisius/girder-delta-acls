@@ -5,15 +5,15 @@ import { createRequire } from 'module';
 const require_ = createRequire(import.meta.url);
 
 /**
- * Playwright is not a dependency of this repo -- it is only needed for these browser
- * checks, which are not part of `tox -e pytest`. Resolve it from $PLAYWRIGHT, else the
- * usual locations.
+ * Playwright is pinned in this directory's package.json (`npm ci` here), not in the
+ * plugin's own packages: it is only needed for these browser checks, which are not part
+ * of `tox -e pytest`. $PLAYWRIGHT overrides; ~/node_modules is the last resort.
  */
 function loadChromium() {
   const candidates = [
     process.env.PLAYWRIGHT,
-    `${process.env.HOME}/node_modules/playwright`,
-    'playwright'
+    'playwright',
+    `${process.env.HOME}/node_modules/playwright`
   ].filter(Boolean);
   for (const c of candidates) {
     try { return require_(c).chromium; } catch { /* try the next */ }
@@ -24,10 +24,14 @@ function loadChromium() {
 const BASE = process.env.GIRDER_URL || 'http://localhost:8751';
 const API = `${BASE}/api/v1`;
 const SHOT = process.env.SHOT_DIR || new URL('./shots/', import.meta.url).pathname;
-// No ms-playwright browsers are downloaded here, so drive the system Chrome.
-const CHROME = process.env.CHROME || '/usr/bin/google-chrome';
+// CHROME unset: the system Chrome, so no ms-playwright download is needed locally.
+// CHROME='' (empty): playwright's own Chromium, as installed by
+// `npx playwright install chromium` -- what CI does.
+const CHROME = process.env.CHROME ?? '/usr/bin/google-chrome';
 
-const chromeArgs = { executablePath: CHROME, args: ['--no-sandbox'] };
+const chromeArgs = CHROME
+  ? { executablePath: CHROME, args: ['--no-sandbox'] }
+  : { args: ['--no-sandbox'] };
 
 // --------------------------------------------------------------------- assertions
 
