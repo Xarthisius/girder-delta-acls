@@ -93,7 +93,13 @@ jobs:
       # Upload to GitHub Release using the `gh` CLI.
       # `dist/` contains the built packages, and the
       # sigstore-produced signatures and certificates.
-      run: >-
-        gh release upload
-        '${{ github.ref_name }}' dist/**
-        --repo '${{ github.repository }}'
+      #
+      # Works whichever came first. Publishing a release from the GitHub UI creates the tag
+      # that triggers this workflow, so the release already exists and only the upload is
+      # needed. A bare tag push has no release yet, so create one. --clobber lets a re-run
+      # replace assets that are already attached. (Ported from girder-flycut-studio 8512d70.)
+      run: |
+        TAG='${{ github.ref_name }}'
+        REPO='${{ github.repository }}'
+        gh release create "$TAG" dist/** --generate-notes --repo "$REPO" \
+          || gh release upload "$TAG" dist/** --clobber --repo "$REPO"
