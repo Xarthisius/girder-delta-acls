@@ -1,0 +1,65 @@
+name: Testing and Linting
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+    services:
+      mongodb:
+        image: mongo:4.4
+        ports:
+          - 27017:27017
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+    steps:
+    - name: Set up Python
+      uses: actions/setup-python@v7
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Set up Node.js
+      uses: actions/setup-node@v7
+      with:
+        node-version: 24
+    - name: Checkout repo
+      uses: actions/checkout@v7
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v7
+      with:
+        enable-cache: true
+        cache-dependency-glob: pyproject.toml
+    - name: Install tox
+      run: uv tool install tox --with tox-uv
+    - name: Build web components
+      run: |
+        cd girder_delta_acls/web_client
+        npm ci
+        npm run build
+    - name: Lint JS, pug and stylus
+      run: |
+        npm ci
+        npm run lint
+    - name: Run Linter
+      run: tox -e lint -- girder_delta_acls
+    - name: Run Tests with coverage
+      env:
+        GIRDER_MAX_CURSOR_TIMEOUT_MS: 60000
+      run: tox -e pytest
+    - name: Upload Coverage to Codecov
+      uses: codecov/codecov-action@v7
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}

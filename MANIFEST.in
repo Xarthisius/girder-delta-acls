@@ -1,0 +1,6 @@
+prune girder_delta_acls/web_client
+include girder_delta_acls/web_client/dist/girder-plugin-delta-acls.umd.cjs
+include girder_delta_acls/web_client/dist/style.css
+prune girder_delta_acls/tests
+exclude MANIFEST.in tox.ini .coveragerc ruff.toml CLAUDE.md uv.lock PLAN.md PROMPT.md
+include README.md package.json package-lock.json

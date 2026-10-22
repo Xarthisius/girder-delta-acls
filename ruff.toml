@@ -1,0 +1,66 @@
+# Mirrors girder-jsonforms' ruff configuration, with two deliberate differences noted below.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+]
+
+# Differs from girder-jsonforms (88). This code was written against Girder core's flake8
+# limit, and `ruff format` would otherwise rewrap every wrapped call.
+line-length = 100
+indent-width = 4
+
+target-version = "py310"
+
+[lint]
+# Pyflakes (`F`) plus a subset of pycodestyle (`E`), same selection as girder-jsonforms.
+# Note this does not include E501, so `line-length` above only affects `ruff format`.
+select = ["E4", "E7", "E9", "F"]
+ignore = []
+
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[format]
+# Differs from girder-jsonforms ("double"). This plugin's Python follows Girder core's
+# single-quote convention, which core enforces with double-quote-string-fixer, and the code
+# is written that way throughout; keeping the two aligned avoids `tox -e format` flipping
+# every string literal. Flip this and the code together if you would rather match
+# girder-jsonforms.
+#
+# Note `ruff format` is NOT a no-op even so: it applies black-style call wrapping, which is
+# not how Girder core hand-wraps arguments. The tree has been run through it once, so it is
+# currently clean -- keep it that way rather than hand-wrapping new code.
+quote-style = "single"
+
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = false
+docstring-code-line-length = "dynamic"

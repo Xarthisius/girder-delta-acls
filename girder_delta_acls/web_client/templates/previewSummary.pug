@@ -1,0 +1,58 @@
+mixin reach(verb)
+  if preview.subfolders.admin === 0
+    | No subfolders you administer will be changed.
+  else
+    | #{verb} #[b #{preview.truncated ? 'at least ' : ''}#{preview.subfolders.admin}]
+    | #{preview.subfolders.admin === 1 ? 'subfolder' : 'subfolders'}
+  if preview.subfolders.skipped
+    |  (#{preview.subfolders.skipped} skipped: you are not an admin there)
+  | .
+
+if state === 'loading'
+  .g-delta-acls-preview.text-muted
+    i.icon-spin3.animate-spin
+    |  Checking subfolders...
+else if state === 'error'
+  .g-delta-acls-preview.text-muted Could not preview the effect on subfolders.
+else if confirming
+  .g-delta-acls-preview.alert.alert-danger.g-delta-acls-confirm
+    if preview
+      - var one = preview.divergent === 1
+      p
+        b Overwrite permissions on #{preview.divergent} #{one ? 'subfolder' : 'subfolders'}?
+      p
+        | #{one ? 'This subfolder has' : 'These subfolders have'} permissions of
+        | #{one ? 'its' : 'their'} own. Replacing will give #{one ? 'it' : 'them'} exactly this
+        | access list instead.
+    else
+      p
+        b Overwrite permissions on every subfolder you administer?
+      p.
+        The effect on subfolders could not be checked. Any permissions set on them
+        individually will be replaced by this access list.
+    button.g-delta-acls-confirm-replace.btn.btn-sm.btn-danger(type="button") Overwrite
+    |
+    button.g-delta-acls-cancel-replace.btn.btn-sm.btn-default(type="button") Cancel
+else if mode === 'replace'
+  .g-delta-acls-preview(class=preview.divergent ? 'alert alert-warning' : 'text-muted')
+    if preview.divergent
+      - var one = preview.divergent === 1
+      p
+        b #{preview.divergent} #{one ? 'subfolder has its' : 'subfolders have their'} own permissions
+        |  that will be overwritten.
+    p
+      +reach('Will replace permissions on')
+else if preview.empty
+  .g-delta-acls-preview.alert.alert-info
+    | No permission changes to apply to subfolders. Only this #{modelType} will be saved.
+else
+  .g-delta-acls-preview
+    p
+      +reach('Will apply to')
+    p.g-delta-acls-changes
+      | Changes:
+      each change, i in changes
+        = ' '
+        span(class=`g-delta-acls-change g-delta-acls-${change.kind}`)= change.text
+        if i < changes.length - 1
+          | ,

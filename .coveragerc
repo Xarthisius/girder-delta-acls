@@ -1,0 +1,5 @@
+[run]
+omit = .venv/*,girder_delta_acls/tests/*
+
+[report]
+omit = .venv/*,girder_delta_acls/tests/*

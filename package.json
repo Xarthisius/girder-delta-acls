@@ -1,0 +1,99 @@
+{
+  "name": "@girder/girder-delta-acls-lint",
+  "version": "0.0.0",
+  "private": true,
+  "description": "JS, pug and stylus linting for girder-delta-acls",
+  "license": "BSD-3-Clause",
+  "scripts": {
+    "lint": "eslint --ext .js,.mjs . && pug-lint girder_delta_acls/web_client/templates && stylelint \"girder_delta_acls/web_client/stylesheets/**/*.styl\"",
+    "format": "eslint --ext .js,.mjs --fix ."
+  },
+  "devDependencies": {
+    "@girder/eslint-config": "^3.1.21",
+    "@girder/pug-lint-config": "^3.1.21",
+    "eslint": "^8.20.0",
+    "eslint-config-semistandard": "^17.0.0",
+    "eslint-config-standard": "^17.0.0",
+    "eslint-plugin-backbone": "^2.1.1",
+    "eslint-plugin-import": "^2.26.0",
+    "eslint-plugin-n": "^15.3.0",
+    "eslint-plugin-promise": "^6.0.0",
+    "pug-lint": "^2.6.0",
+    "stylelint": "^16.0.0",
+    "stylelint-stylus": "^1.0.0"
+  },
+  "eslintConfig": {
+    "root": true,
+    "extends": [
+      "@girder",
+      "eslint:recommended"
+    ],
+    "parserOptions": {
+      "ecmaVersion": "latest",
+      "sourceType": "module"
+    },
+    "rules": {
+      "promise/no-native": 0
+    },
+    "settings": {
+      "import/ignore": [
+        "node_modules"
+      ]
+    },
+    "overrides": [
+      {
+        "files": [
+          "girder_delta_acls/web_client/**/*.js"
+        ],
+        "env": {
+          "browser": true,
+          "jquery": true
+        },
+        "globals": {
+          "girder": "readonly",
+          "Backbone": "readonly",
+          "_": "readonly",
+          "moment": "readonly"
+        }
+      },
+      {
+        "files": [
+          "girder_delta_acls/tests/e2e/**/*.mjs"
+        ],
+        "env": {
+          "node": true,
+          "es2022": true
+        },
+        "rules": {
+          "indent": [
+            "error",
+            2
+          ]
+        }
+      }
+    ]
+  },
+  "eslintIgnore": [
+    "**/node_modules/",
+    "**/dist/",
+    "**/shots/",
+    ".tox/",
+    "build/",
+    "**/__pycache__/"
+  ],
+  "pugLintConfig": {
+    "extends": "@girder/pug-lint-config",
+    "excludeFiles": [
+      "**/node_modules/"
+    ]
+  },
+  "stylelint": {
+    "extends": [
+      "stylelint-stylus/standard"
+    ],
+    "ignoreFiles": [
+      "**/node_modules/**",
+      "**/dist/**"
+    ]
+  }
+}

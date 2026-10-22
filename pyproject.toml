@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "girder-delta-acls"
+version = "1.0.0"
+description = "Girder plugin that propagates only the changed entries of an ACL to subfolders"
+readme = "README.md"
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Web Environment",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "girder>=5.0.6",
+]
+
+[project.entry-points."girder.plugin"]
+delta_acls = "girder_delta_acls:DeltaAclsPlugin"
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "pytest-girder>=5.0.0a5.dev0",
+    "pytest-xdist",
+    "ruff",
+]
+
+# Pinned to the package itself: a bare find_packages() also walks build/ and
+# .eggs/ when they are lying around.
+[tool.setuptools.packages.find]
+include = ["girder_delta_acls*"]
+
+[tool.pytest.ini_options]
+cache_dir = "build/test/pytest_cache"
+junit_family = "xunit2"
+testpaths = ["girder_delta_acls/tests"]

@@ -1,0 +1,22 @@
+.g-delta-acls-mode.hide
+  .radio
+    label
+      input#g-delta-acls-mode-delta(type="radio", name="g-delta-acls-mode", value="delta",
+          checked="checked")
+      | #[b Apply only the changes I made]
+      span.label.label-success.g-delta-acls-recommended recommended
+      .g-delta-acls-help.
+        Adds, removes or changes just the users and groups you edited here.
+        Other permissions on subfolders are kept.
+  .radio
+    label
+      input#g-delta-acls-mode-replace(type="radio", name="g-delta-acls-mode", value="replace")
+      | #[b Replace subfolder permissions with this list]
+      .g-delta-acls-help
+        i.icon-attention
+        |  Every subfolder you administer will get exactly this access list.
+        |  Permissions set individually on subfolders will be lost.
+      .g-delta-acls-restricted.hide
+        i.icon-lock
+        |  Restricted to site administrators.
+  .g-delta-acls-summary

@@ -5,7 +5,7 @@ push down **only what changed** (the delta) instead of **copying the whole ACL**
 subfolder. The current "make everything match" behaviour stays available as a separate,
 clearly labelled option.
 
-Status: plan only. No code yet.
+Status: implemented (2026-10-22). See `CLAUDE.md` for current state and for where the code departs from this plan.
 
 ---
 

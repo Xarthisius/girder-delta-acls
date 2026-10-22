@@ -1,0 +1,19 @@
+.g-config-breadcrumb-container
+p.g-delta-acls-config-description.
+  These settings control what happens when someone applies a folder's or collection's
+  permissions to its subfolders.
+form#g-delta-acls-config-form(role="form")
+  .form-group
+    label.control-label(for="g-delta-acls-default-mode") Default for API clients
+    select#g-delta-acls-default-mode.form-control.input-sm
+      option(value="replace") Replace subfolder permissions (core behaviour)
+      option(value="delta") Apply only the changes
+    p.help-block.
+      Used when a request asks for recursion but does not say how, as scripts and
+      girder_client do. The web interface always says which one the user chose.
+  .checkbox
+    label
+      input#g-delta-acls-replace-admin-only(type="checkbox")
+      | Only site administrators may replace subfolder permissions
+  p#g-delta-acls-config-error.g-validation-failed-message
+  input.btn.btn-sm.btn-primary(type="submit", value="Save")
