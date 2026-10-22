@@ -65,3 +65,63 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         # Fail the run if the upload fails, instead of leaving the commit with no coverage.
         fail_ci_if_error: true
+
+  # The browser checks in girder_delta_acls/tests/e2e: the access dialog against a real
+  # Girder, failing on any unexpected console or page error. run.sh drops its own database,
+  # starts Girder from .venv and stops it again.
+  browser:
+    name: Browser end-to-end
+    runs-on: ubuntu-24.04
+    services:
+      mongodb:
+        image: mongo:4.4
+        ports:
+          - 27017:27017
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+    steps:
+    - name: Set up Python
+      uses: actions/setup-python@v7
+      with:
+        python-version: "3.12"
+    - name: Set up Node.js
+      uses: actions/setup-node@v7
+      with:
+        node-version: 24
+    - name: Checkout repo
+      uses: actions/checkout@v7
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v7
+      with:
+        enable-cache: true
+        cache-dependency-glob: pyproject.toml
+    - name: Install the plugin
+      # The .venv run.sh uses by default. --locked: fail if uv.lock is stale.
+      run: uv sync --locked
+    - name: Build web components
+      run: |
+        cd girder_delta_acls/web_client
+        npm ci
+        npm run build
+    - name: Install the browser
+      run: |
+        cd girder_delta_acls/tests/e2e
+        npm ci
+        npx playwright install --with-deps chromium
+    - name: Verify in a browser
+      env:
+        # Empty: use playwright's Chromium instead of a system Chrome.
+        CHROME: ""
+      run: girder_delta_acls/tests/e2e/run.sh
+    - name: Upload screenshots and server log
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: browser-verification
+        path: |
+          girder_delta_acls/tests/e2e/shots/
+          girder_delta_acls/tests/e2e/girder.log
+        if-no-files-found: warn
+        retention-days: 7

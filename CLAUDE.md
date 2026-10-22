@@ -11,7 +11,7 @@ explains those choices, and they are not repeated here.
 | Area | State |
 |---|---|
 | `lib/delta.py`, `lib/propagate.py`, REST interception, preview, settings, Swagger docs | **Done.** 65 tests. |
-| Web client (nested radios, live preview, replace confirm, config page) | **Done.** 31 browser checks pass in real Chrome (`tests/e2e/run.sh`). |
+| Web client (nested radios, live preview, replace confirm, config page) | **Done.** 31 browser checks (`tests/e2e/run.sh`), run in CI by the **Browser end-to-end** job. |
 | `tox -e lint`, `tox -e pytest`, `npm run lint`, `uv build`, `check-manifest` | All green. |
 | Git | `main`, pushed to `github.com/Xarthisius/girder-delta-acls`. Codecov and PyPI trusted publishing are configured; no release tagged yet. |
 
@@ -25,6 +25,7 @@ env -u FORCE_COLOR tox -e pytest          # fresh resolve, 4-way xdist, coverage
 env -u FORCE_COLOR tox -e format          # ruff format + fix; the tree is kept format-clean
 npm ci && npm run lint                    # eslint + pug-lint + stylelint (root package.json is lint-only)
 cd girder_delta_acls/web_client && npm ci && npm run build   # REQUIRED before Girder starts
+(cd girder_delta_acls/tests/e2e && npm ci) # playwright for the browser checks
 girder_delta_acls/tests/e2e/run.sh        # browser checks; see tests/e2e/README.md
 ```
 
