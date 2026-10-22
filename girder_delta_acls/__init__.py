@@ -16,6 +16,8 @@ class DeltaAclsPlugin(GirderPlugin):
             'rest.put.collection/:id/access.before', PLUGIN_NAME, rest.onCollectionAccessBefore
         )
 
+        rest.describeCoreAccessRoutes()
+
         info['apiRoot'].folder.route('POST', (':id', 'access', 'preview'), rest.previewFolderAccess)
         info['apiRoot'].collection.route(
             'POST', (':id', 'access', 'preview'), rest.previewCollectionAccess

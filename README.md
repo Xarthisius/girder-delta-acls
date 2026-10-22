@@ -50,7 +50,8 @@ another plugin's ACL update) are never lost. The tree as a whole is not transact
 |---|---|---|
 | `recurseMode` | `delta`, `replace` | Only used with `recurse=true`. Omitted → the `delta_acls.default_recurse_mode` setting. |
 
-Responses are identical to core's. A delta-mode save also sets a `Girder-Delta-Acls` header,
+The parameter is documented on core's own routes in the API docs (Swagger). Responses are
+identical to core's. A delta-mode save also sets a `Girder-Delta-Acls` header,
 e.g. `{"mode": "delta", "changed": true, "folders": 34}`.
 
 `POST /folder/:id/access/preview` and `POST /collection/:id/access/preview` take the same

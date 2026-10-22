@@ -10,10 +10,10 @@ explains those choices, and they are not repeated here.
 
 | Area | State |
 |---|---|
-| `lib/delta.py`, `lib/propagate.py`, REST interception, preview, settings | **Done.** 60 tests, 99% line coverage. |
+| `lib/delta.py`, `lib/propagate.py`, REST interception, preview, settings, Swagger docs | **Done.** 65 tests. |
 | Web client (nested radios, live preview, replace confirm, config page) | **Done.** 31 browser checks pass in real Chrome (`tests/e2e/run.sh`). |
 | `tox -e lint`, `tox -e pytest`, `npm run lint`, `uv build`, `check-manifest` | All green. |
-| Git | `main`, no remote. Nothing pushed; the GitHub/PyPI setup in PLAN.md §7.2 is still to do. |
+| Git | `main`, pushed to `github.com/Xarthisius/girder-delta-acls`. Codecov and PyPI trusted publishing are configured; no release tagged yet. |
 
 ## Commands
 
@@ -43,13 +43,15 @@ girder_delta_acls/
                        # two preview routes, registers static content
   constants.py         # PLUGIN_NAME, RecurseMode, PluginSettings, event + header names
   settings.py          # validators/defaults for the two settings
-  rest.py              # listeners, hidden delta handlers, preview handlers
+  rest.py              # listeners, hidden delta handlers, preview handlers,
+                       # describeCoreAccessRoutes (Swagger docs on core's routes)
   lib/delta.py         # PURE: computeDelta, AclDelta, toMongoPipeline, aclSignature
   lib/propagate.py     # applyToDocument, propagateDelta (level walk), surveySubtree (preview)
   tests/
     test_delta.py                  # unit tests; pipeline tests run on real Mongo via `db`
     test_recursive_access.py       # PUT .../access end to end (plan §5 tests 1-9, 12, 13)
     test_preview_and_settings.py   # preview, settings, replace_requires_site_admin (10, 11)
+    test_docs.py                   # recurseMode documented on core's routes in /describe
     e2e/                           # browser checks; NOT part of tox -e pytest
   web_client/
     main.js routes.js
@@ -98,7 +100,14 @@ girder_delta_acls/
    otherwise be read as a field path (`test_flag_names_are_literal`).
 7. **`computeDelta` takes the doc *after* core validation**, not the raw request. Feeding it
    the request would skip `_validateFlags` and the level checks.
-8. **Every server test module declares `pytestmark = pytest.mark.plugin('delta_acls')`.**
+8. **`describeCoreAccessRoutes` must also patch `docs.routes`.** Core registers each
+   route's Swagger operation before plugins load, as a *shallow copy* of
+   `description.asDict()`. Params (shared list) and error responses (shared dict) added
+   later show up; notes do not, because `description` becomes a new key. The registry keys
+   methods as `'PUT'`, and `/describe` lowercases them. `test_docs.py` catches a regression
+   only when the folder test runs first in a fresh process. Later in the same process an
+   earlier load has already mutated the class-level description before core re-registers.
+9. **Every server test module declares `pytestmark = pytest.mark.plugin('delta_acls')`.**
    A mark in `conftest.py` is silently ignored. `test_delta.py` has none on purpose: it
    only needs the `db` fixture.
 
@@ -138,11 +147,7 @@ PLAN §1 (`Collection.setAccessList` not passing `force` down) does not affect t
 
 ## Not done (all optional or outside this repo)
 
-- Swagger docs for `recurseMode` on the core routes (PLAN §3.1, "optional, low priority").
-  The hidden handlers are `hide=True`. The preview routes are documented normally.
 - The collection-review interop test (PLAN §6.1, optional).
 - A symlink into `girder/plugins/` (outside this repo). `uv sync` / `pip install -e .` is
   enough for Girder to load the plugin through the entry point.
 - Web-client unit tests (jasmine). The e2e script covers the flows.
-- GitHub remote, the PyPI pending trusted publisher, the `pypi` environment and the
-  `CODECOV_TOKEN` secret (PLAN §7.2).

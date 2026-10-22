@@ -11,7 +11,7 @@ handlers below are declared exactly like core's, so ``autoDescribeRoute`` /
 import copy
 import json
 
-from girder.api import access
+from girder.api import access, docs
 from girder.api.describe import Description, autoDescribeRoute
 from girder.api.rest import (
     RestException,
@@ -21,6 +21,8 @@ from girder.api.rest import (
     requireAdmin,
     setResponseHeader,
 )
+from girder.api.v1.collection import Collection as CollectionResource
+from girder.api.v1.folder import Folder as FolderResource
 from girder.constants import AccessType, TokenScope
 from girder.models.collection import Collection
 from girder.models.folder import Folder
@@ -33,6 +35,73 @@ from girder.utility.progress import ProgressContext
 from .constants import RESPONSE_HEADER, PluginSettings, RecurseMode
 from .lib.delta import computeDelta
 from .lib.propagate import applyToDocument, propagateDelta, surveySubtree
+
+
+_RECURSE_MODE_DOC = (
+    'How recurse=true treats subfolders. "delta" applies only the entries that changed on '
+    'this resource to the subfolders you administer, and leaves every other entry on them '
+    'alone. "replace" overwrites their access lists with this one (core Girder behaviour). '
+    'If omitted, the delta_acls.default_recurse_mode setting decides. Ignored unless '
+    'recurse is true.'
+)
+
+_RECURSE_DOC = 'With the delta_acls plugin, recurseMode chooses how this is done.'
+
+_REPLACE_RESTRICTED_DOC = (
+    'recurseMode=replace was requested by a non-site-admin while '
+    'delta_acls.replace_requires_site_admin is enabled.'
+)
+
+_ACCESS_NOTES = (
+    'The delta_acls plugin changes what recurse=true does when recurseMode=delta: only the '
+    'users, groups and public settings that changed on this %s are applied to its '
+    'subfolders, and every other entry on them is kept. Subfolders you do not administer '
+    'are skipped together with everything below them, in both modes. A delta-mode save '
+    'sets a Girder-Delta-Acls response header, JSON {"mode", "changed", "folders"}. Use '
+    'POST /%s/{id}/access/preview to see the effect before saving.'
+)
+
+
+def describeCoreAccessRoutes():
+    """
+    Document ``recurseMode`` on core's own ``PUT /{folder,collection}/:id/access``.
+
+    The delta handlers are hidden from Swagger and only reached through the .before
+    listeners, so core's route descriptions are where API users look. They are extended in
+    place, as girder-jsonforms does, and the notes are also copied into the Swagger
+    operation core has already registered (see below). ``param`` and ``errorResponse``
+    merge into an existing entry and skip text that is already there, so calling this
+    again (pytest-girder loads the plugin once per test) changes nothing.
+
+    Adding the param also makes core's autoDescribeRoute validate it against the enum. That
+    is harmless: core's handler takes no ``recurseMode`` argument, so the value is dropped,
+    and the .before listener has already rejected bad values with the same 400.
+    """
+    for handler, typeName in (
+        (FolderResource.updateFolderAccess, 'folder'),
+        (CollectionResource.updateCollectionAccess, 'collection'),
+    ):
+        description = handler.description
+        description.param(
+            'recurse', _RECURSE_DOC, dataType='boolean', default=False, required=False
+        )
+        description.param(
+            'recurseMode', _RECURSE_MODE_DOC, enum=list(RecurseMode.ALL), required=False
+        )
+        description.errorResponse(_REPLACE_RESTRICTED_DOC, 403)
+
+        notes = _ACCESS_NOTES % (typeName, typeName)
+        if notes not in (description._notes or ''):
+            description.notes('\n\n'.join(filter(None, (description._notes, notes))))
+
+        # Core registered this route's Swagger operation before plugins load, as a shallow
+        # copy of description.asDict(). The params list and responses dict are shared with
+        # it, so the additions above already show; the notes are not, so copy them over.
+        # Core registers it under 'PUT'; /describe lowercases method names on output.
+        methods = docs.routes.get(typeName, {}).get('/%s/{id}/access' % typeName, {})
+        for method, operation in methods.items():
+            if method.upper() == 'PUT':
+                operation['description'] = description._notes
 
 
 def _accessDescription(description, model, typeName):
@@ -69,14 +138,7 @@ def _withRecurseParams(description):
             default=False,
             required=False,
         )
-        .param(
-            'recurseMode',
-            '"delta" applies only the entries that changed on this resource to its '
-            'subfolders; "replace" overwrites their access lists with this one (core '
-            'behaviour). Only used when recurse is true.',
-            enum=list(RecurseMode.ALL),
-            required=False,
-        )
+        .param('recurseMode', _RECURSE_MODE_DOC, enum=list(RecurseMode.ALL), required=False)
         .errorResponse('ID was invalid.')
         .errorResponse('Admin access was denied.', 403)
     )
