@@ -172,6 +172,8 @@ def _deltaUpdate(model, rootType, doc, access, public, publicFlags, progress):
         if not delta.isEmpty():
             ctx.update(increment=1, message='Updating ' + doc['name'])
             doc = applyToDocument(model, doc, delta)
+            if doc is None:
+                raise RestException('The %s was deleted while saving.' % rootType, 404)
 
             descendantDelta = delta if user['admin'] else delta.withoutAdminFlags()
             folderIds = propagateDelta(doc, rootType, descendantDelta, user, progress=ctx)
@@ -267,14 +269,29 @@ onFolderAccessBefore = _makeAccessListener(updateFolderAccessDelta)
 onCollectionAccessBefore = _makeAccessListener(updateCollectionAccessDelta)
 
 
-def _principalSummary(change, principalType):
+def _principalSummary(change, principalType, user):
+    """
+    A change's summary plus the principal's display name.
+
+    Principals already on the ACL are named unconditionally: core's GET .../access shows
+    them to this resource's admins anyway. A principal the request *adds* is named only if
+    the editor may read that user or group. Otherwise anyone administering any folder could
+    post arbitrary ids here and read back private users' logins and names.
+    """
     out = change.summary()
-    if principalType == 'users':
-        doc = User().load(change.id, force=True, fields=['login', 'firstName', 'lastName'])
+    users = principalType == 'users'
+    model = User() if users else Group()
+    fields = ['login', 'firstName', 'lastName'] if users else ['name']
+
+    doc = model.load(change.id, force=True, fields=fields + ['access', 'public'])
+    if doc is not None and change.oldLevel is None:
+        if not model.hasAccess(doc, user, AccessType.READ):
+            doc = None
+
+    if users:
         out['login'] = doc and doc['login']
         out['name'] = doc and ('%s %s' % (doc['firstName'], doc['lastName'])).strip()
     else:
-        doc = Group().load(change.id, force=True, fields=['name'])
         out['name'] = doc and doc['name']
     return out
 
@@ -294,7 +311,7 @@ def _preview(model, rootType, doc, access, public, publicFlags):
     summary = delta.summary()
     for principalType in ('users', 'groups'):
         summary[principalType] = [
-            _principalSummary(c, principalType) for c in getattr(delta, principalType)
+            _principalSummary(c, principalType, user) for c in getattr(delta, principalType)
         ]
 
     survey = surveySubtree(doc, rootType, user)

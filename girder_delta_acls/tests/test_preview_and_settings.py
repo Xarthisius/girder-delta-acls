@@ -183,3 +183,33 @@ def test_folder_write_level_irrelevant_to_preview_counts(server, people, tree):
     )
     resp = preview(server, alice, 'folder', tree['A'], acl_json(tree['A']))
     assert resp.json['subfolders'] == {'total': 1, 'admin': 0, 'skipped': 1}
+
+
+def test_preview_does_not_name_principals_the_editor_cannot_see(server, people, tree):
+    """Posting arbitrary ids must not reveal private users' logins or private group names."""
+    from girder.models.group import Group
+    from girder.models.user import User
+
+    alice, admin, dave = people['alice'], people['admin'], people['dave']
+    User().setPublic(dave, False, save=True)
+    group = Group().createGroup('Hidden Lab', admin, public=False)
+
+    access = acl_json(tree['A'], add=[(dave, READ)])
+    access['groups'].append({'id': str(group['_id']), 'level': READ, 'flags': []})
+
+    def named(user):
+        resp = preview(server, user, 'folder', tree['A'], access)
+        assertStatusOk(resp)
+        return resp.json['delta']['users'][0], resp.json['delta']['groups'][0]
+
+    u, g = named(alice)
+    assert (u['id'], u['to'], u['login'], u['name']) == (str(dave['_id']), READ, None, None)
+    assert (g['id'], g['name']) == (str(group['_id']), None)
+
+    u, g = named(admin)
+    assert (u['login'], g['name']) == ('david', 'Hidden Lab')
+
+    # Once they are on the ACL, core's GET .../access shows them to Alice anyway.
+    Folder().setUserAccess(reload(tree['A']), dave, READ, save=True)
+    resp = preview(server, alice, 'folder', tree['A'], acl_json(tree['A'], remove=[dave]))
+    assert resp.json['delta']['users'][0]['login'] == 'david'
