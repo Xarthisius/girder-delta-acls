@@ -63,3 +63,5 @@ jobs:
       uses: codecov/codecov-action@v7
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        # Fail the run if the upload fails, instead of leaving the commit with no coverage.
+        fail_ci_if_error: true

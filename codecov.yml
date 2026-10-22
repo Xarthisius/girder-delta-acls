@@ -1,0 +1,6 @@
+codecov:
+  notify:
+    # Post no status until an upload exists for the commit. Without this Codecov can report
+    # "No report found" as success while the test job is still queued, and that green status
+    # would stand if the upload never arrived.
+    after_n_builds: 1
