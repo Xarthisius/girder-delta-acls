@@ -10,10 +10,11 @@ explains those choices, and they are not repeated here.
 
 | Area | State |
 |---|---|
-| `lib/delta.py`, `lib/propagate.py`, REST interception, preview, settings, Swagger docs | **Done.** 65 tests. |
+| `lib/delta.py`, `lib/propagate.py`, REST interception, preview, settings, Swagger docs | **Done.** 66 tests. |
 | Web client (nested radios, live preview, replace confirm, config page) | **Done.** 31 browser checks (`tests/e2e/run.sh`), run in CI by the **Browser end-to-end** job. |
 | `tox -e lint`, `tox -e pytest`, `npm run lint`, `uv build`, `check-manifest` | All green. |
-| Git | `main`, pushed to `github.com/Xarthisius/girder-delta-acls`. Codecov and PyPI trusted publishing are configured; no release tagged yet. |
+| CI | **Testing and Linting** (`build (3.12)` + **Browser end-to-end**) and **Publish to PyPI** green on `main`. |
+| Release | **v1.0.0** released 2026-10-22: on [PyPI](https://pypi.org/p/girder-delta-acls), and as a GitHub release with the wheel, sdist and sigstore bundles. See "Releasing". |
 
 ## Commands
 
@@ -32,9 +33,39 @@ girder_delta_acls/tests/e2e/run.sh        # browser checks; see tests/e2e/README
 `registerPluginStaticContent` md5s the files in `web_client/dist/` at plugin load, so a
 missing `dist/` breaks **server tests too**, not just the UI. Build it first.
 
+The local deploy-dev deployment can leave `web_client/dist/` and
+`web_client/node_modules/.vite-temp` owned by root, after which `npm run build` fails with
+EACCES. Fix: `sudo chown -R $USER girder_delta_acls/web_client/{dist,node_modules}`.
+
 On this machine MongoDB was not running. Tests were run against a throwaway
 `docker run -d --rm --name delta-acls-mongo -p 27017:27017 mongo:4.4`. mongomock does not
 work: it has no pipeline updates.
+
+## CI and releasing
+
+`.github/workflows/build-test.yaml` (push to `main`, PRs) has two jobs:
+
+- `build (3.12)`: JS lint, ruff, `tox -e pytest`, Codecov upload. The upload step has
+  `fail_ci_if_error: true`, and `codecov.yml` sets `after_n_builds: 1`. Without that,
+  Codecov posted green "No report found" statuses while the test job was still queued.
+- **Browser end-to-end**: `uv sync --locked`, builds the web client, installs playwright's
+  Chromium (`--with-deps`), runs `tests/e2e/run.sh` with `CHROME=""`, and always uploads
+  `shots/` and `girder.log` as the `browser-verification` artifact.
+
+`.github/workflows/release.yml` builds on every push and publishes only on a tag, through
+PyPI trusted publishing (GitHub environment `pypi`). It then signs with sigstore and
+attaches everything to the GitHub release. That last step tries `gh release create` and
+falls back to `gh release upload --clobber`, so either order works (ported from
+girder-flycut-studio `8512d70`).
+
+To release:
+
+1. Bump `version` in `pyproject.toml` (hardcoded, no setuptools-scm), commit, push, and
+   wait for CI to go green.
+2. Publish a release for tag `vX.Y.Z` from the GitHub UI, or run
+   `gh release create vX.Y.Z --target main --generate-notes`.
+3. Check that the PyPI wheel contains `girder_delta_acls/web_client/dist/*.umd.cjs` and
+   `style.css`. Girder will not load the plugin without them.
 
 ## Layout
 
@@ -108,7 +139,13 @@ girder_delta_acls/
    methods as `'PUT'`, and `/describe` lowercases them. `test_docs.py` catches a regression
    only when the folder test runs first in a fresh process. Later in the same process an
    earlier load has already mutated the class-level description before core re-registers.
-9. **Every server test module declares `pytestmark = pytest.mark.plugin('delta_acls')`.**
+9. **The preview must not name principals the editor cannot see.** `_principalSummary`
+   loads with `force=True`, then names a principal the request *adds* only if
+   `hasAccess(READ)` allows it. Without that check, anyone administering any folder
+   could post arbitrary ids and read back private users' logins and private groups'
+   names. Principals already on the ACL are named, because core's GET .../access shows
+   them anyway. Guarded by `test_preview_does_not_name_principals_the_editor_cannot_see`.
+10. **Every server test module declares `pytestmark = pytest.mark.plugin('delta_acls')`.**
    A mark in `conftest.py` is silently ignored. `test_delta.py` has none on purpose: it
    only needs the `db` fixture.
 
@@ -152,3 +189,8 @@ PLAN §1 (`Collection.setAccessList` not passing `force` down) does not affect t
 - A symlink into `girder/plugins/` (outside this repo). `uv sync` / `pip install -e .` is
   enough for Girder to load the plugin through the entry point.
 - Web-client unit tests (jasmine). The e2e script covers the flows.
+- In delta mode, a failing save does not fire core's `rest.put.*/access.failed` event,
+  because the exception is raised inside the `.before` listener. Nothing in the deployed
+  stack listens to it.
+- The dialog's `MutationObserver` is not disconnected when the AccessWidget is destroyed.
+  It only keeps a reference to detached DOM.
